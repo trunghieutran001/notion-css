@@ -22,51 +22,70 @@ try:
         # Truy cập trang web
         driver.get("https://www.notion.so/Nissin-R-D-a166d0a2263c440b80c048416dfa7c96")
 
-        try:
-            # Cuộn đến vị trí cụ thể (x, y)
-            driver.execute_script("window.scrollTo(0, 900);")
+        # Thêm CSS để xóa các hiệu ứng :hover, :active và outline
+        driver.execute_script("""
+            var style = document.createElement('style');
+            style.innerHTML = `
+                a:active, a:hover {
+                    outline: none !important; /* Xóa hiệu ứng outline */
+                    background: none !important; /* Xóa hiệu ứng nền */
+                    color: inherit !important; /* Đặt màu chữ thành mặc định */
+                }
+            `;
+            document.head.appendChild(style);
+        """)
 
-            # Hoặc cuộn đến phần tử <a> mục tiêu
-            a_element = WebDriverWait(driver, 20).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/A-1-1-e6b80bbe37bb41a88945844e7a8c8fad']"))
-            )
+        # Chờ cho trang tải và tìm tất cả các phần tử với class chính xác
+        elements = WebDriverWait(driver, 20).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "notion-selectable.notion-page-block.notion-collection-item"))
+        )
 
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", a_element)
+        # Tạo danh sách các giá trị div_text mong muốn
+        target_div_texts = [f"{letter}-{num1}-{num2}" for letter in "ABCDE" for num1 in range(1, 6) for num2 in range(1, 11)]
 
-            # Tìm thẻ <div> bên trong thẻ <a>
-            div_element = a_element.find_element(By.CSS_SELECTOR, "div[spellcheck='true'][contenteditable='false']")
+        for element in elements:
+            try:
+                # Tìm phần tử div chứa văn bản bên trong thẻ <a>
+                a_element = element.find_element(By.TAG_NAME, 'a')
+                div_text_element = a_element.find_element(By.CSS_SELECTOR, "div[spellcheck='true'][contenteditable='false']")
 
-            # Lấy nội dung của thẻ <div>
-            div_text = div_element.text.strip()
+                # Tìm phần tử cha của div_text_element và sửa padding
+                parent_element = div_text_element.find_element(By.XPATH, "..")
+                driver.execute_script("arguments[0].style.padding = '0px';", parent_element)
 
-            # Thay đổi kích thước font, căn giữa chữ và màu chữ nếu nội dung là "A-1-1"
-            if div_text == "A-1-1":
-                driver.execute_script("""
-                    arguments[0].style.fontSize = '32px';
-                    arguments[0].style.padding = '10px 45px 10px';
-                """, div_element)
+                # Kiểm tra nội dung của div_text
+                div_text = div_text_element.text.strip()
+                if div_text in target_div_texts:
+                    driver.execute_script("""
+                        arguments[0].style.fontSize = '32px';
+                        arguments[0].style.padding = '1px 40px 1px';
+                        arguments[0].style.margin = 'auto';
+                        arguments[0].style.textAlign = 'center';
+                        arguments[0].style.display = 'block';
+                        arguments[0].style.position = 'relative';
+                    """, div_text_element)
 
-            # Thay đổi màu nền của thẻ <a> dựa trên nội dung của thẻ <span>
-            span_element = a_element.find_element(By.TAG_NAME, 'span')
-            span_text = span_element.text.strip()
+                # Thay đổi màu nền của thẻ <a> dựa trên nội dung của thẻ <span>
+                span_element = a_element.find_element(By.TAG_NAME, 'span')
+                span_text = span_element.text.strip()
 
-            if span_text == "Trống":
-                driver.execute_script("arguments[0].style.backgroundColor = 'white';", a_element)
-                driver.execute_script("arguments[0].style.display = 'none';", span_element)
-            elif span_text == "Tồn kho":
-                driver.execute_script("arguments[0].style.backgroundColor = '#DBEDDB';", a_element)
-                driver.execute_script("arguments[0].style.display = 'none';", span_element)
-            else:
-                driver.execute_script("arguments[0].style.backgroundColor = 'gray';", a_element)
+                if span_text == "Trống":
+                    driver.execute_script("arguments[0].style.backgroundColor = 'white';", a_element)
+                    driver.execute_script("arguments[0].style.display = 'none';", span_element)
+                elif span_text == "Tồn kho":
+                    driver.execute_script("arguments[0].style.backgroundColor = '#DBEDDB';", a_element)
+                    driver.execute_script("arguments[0].style.display = 'none';", span_element)
+                elif span_text == "Chuẩn bị":
+                    driver.execute_script("arguments[0].style.backgroundColor = '#FDECC8';", a_element)
+                    driver.execute_script("arguments[0].style.display = 'none';", span_element)
+                else:
+                    driver.execute_script("arguments[0].style.backgroundColor = 'gray';", a_element)
 
-            # Thay đổi vị trí của thẻ <div> thành absolute
-            driver.execute_script("arguments[0].style.position = 'absolute';", div_element)
-
-        except Exception as e:
-            print(f"Đã xảy ra lỗi khi tìm hoặc thay đổi phần tử: {e}")
+            except Exception as e:
+                print(f"Đã xảy ra lỗi khi tìm hoặc thay đổi phần tử: {e}")
 
         # Đợi để quan sát thay đổi
-        time.sleep(2)  # Đợi 5 giây trước khi reload trang
+        time.sleep(2)  # Đợi 2 giây trước khi reload trang.
 
         # Reload trang sau khoảng thời gian định sẵn
         print("Reloading trang...")
